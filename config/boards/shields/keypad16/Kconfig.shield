@@ -1,2 +1,5 @@
 config SHIELD_KEYPAD16
     def_bool $(shields_list_contains, keypad16)
+    select ZMK_KSCAN_GPIO_ENCODER
+
+rsource "../../../drivers/kscan/Kconfig"

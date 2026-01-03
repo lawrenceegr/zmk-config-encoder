@@ -39,7 +39,6 @@
         encoder_rotations {
             kscan = <&encoder_rotation_kscan>;
             row-offset = <5>;
-            column-offset = <0>;
         };
     };
 
