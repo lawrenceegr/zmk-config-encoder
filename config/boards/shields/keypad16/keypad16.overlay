@@ -65,8 +65,8 @@
             1  5  9 13
             2  6 10 14
             3  7 11 15
-            16 17 18 19
-            20 21 24 25
+            16 17 20 21
+            24 25
         >;
 	};
     default_layout: default_layout {
@@ -76,7 +76,7 @@
 		kscan = <&kscan0>;
 		
 		keys  //                    w   h   x    y    rot  rx   ry
-			// Row 0
+			// Row 0 - Main 4x4 Keypad
 			= <&key_physical_attrs 100 100   0    0    0    0    0>
 			, <&key_physical_attrs 100 100 100    0    0    0    0>
 			, <&key_physical_attrs 100 100 200    0    0    0    0>
@@ -96,16 +96,14 @@
 			, <&key_physical_attrs 100 100 100  300    0    0    0>
 			, <&key_physical_attrs 100 100 200  300    0    0    0>
 			, <&key_physical_attrs 100 100 300  300    0    0    0>
-			// Row 4 - Encoder push buttons (16-17) + placeholders (18-19)
-			, <&key_physical_attrs 100 100   0  400    0    0    0>  // Left encoder button
-			, <&key_physical_attrs 100 100 100  400    0    0    0>  // Right encoder button
-			, <&key_physical_attrs 100 100 200  400    0    0    0>  // Placeholder
-			, <&key_physical_attrs 100 100 300  400    0    0    0>  // Placeholder
-			// Row 5-6 - Encoder rotations (virtual positions)
-			, <&key_physical_attrs 100  50   0  500    0    0    0>  // Left CCW (20)
-			, <&key_physical_attrs 100  50   0  550    0    0    0>  // Left CW (21)
-			, <&key_physical_attrs 100  50 100  500    0    0    0>  // Right CCW (24)
-			, <&key_physical_attrs 100  50 100  550    0    0    0>  // Right CW (25)
+			// Encoder buttons - separated from keypad (x offset +450)
+			, <&key_physical_attrs 100 100 450    0    0    0    0>  // Left encoder button (16)
+			, <&key_physical_attrs 100 100 450  100    0    0    0>  // Right encoder button (17)
+			// Encoder rotations - next to encoder buttons
+			, <&key_physical_attrs  80  50 560    0    0    0    0>  // Left CCW (20)
+			, <&key_physical_attrs  80  50 560   50    0    0    0>  // Left CW (21)
+			, <&key_physical_attrs  80  50 560  100    0    0    0>  // Right CCW (24)
+			, <&key_physical_attrs  80  50 560  150    0    0    0>  // Right CW (25)
 			;
 	};
 };
