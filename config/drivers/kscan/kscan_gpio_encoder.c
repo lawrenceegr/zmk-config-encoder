@@ -103,14 +103,16 @@ static void kscan_gpio_encoder_poll(struct k_work *work) {
             uint32_t row = i;
             uint32_t col = (delta > 0) ? 1 : 0;
 
-            LOG_DBG("Encoder %d: delta=%d, pos=%d (row=%d, col=%d)",
-                    i, delta, data->encoders[i].position, row, col);
+            LOG_INF("ENCODER %d ROTATED: delta=%d, direction=%s, row=%d, col=%d",
+                    i, delta, delta > 0 ? "CCW" : "CW", row, col);
 
-            // Emit key press/release
+            // Emit key press/release events
             if (data->callback != NULL) {
                 data->callback(dev, row, col, true);
-                k_msleep(10);
+                // Release immediately - the kscan layer handles timing
                 data->callback(dev, row, col, false);
+            } else {
+                LOG_ERR("Encoder callback is NULL!");
             }
         }
 
@@ -131,6 +133,7 @@ static int kscan_gpio_encoder_configure(const struct device *dev,
     }
 
     data->callback = callback;
+    LOG_INF("Encoder kscan callback configured");
     return 0;
 }
 
@@ -142,15 +145,18 @@ static int kscan_gpio_encoder_enable(const struct device *dev) {
 
     // Initialize encoder states
     for (uint32_t i = 0; i < config->num_encoders; i++) {
-        data->encoders[i].last_state = read_encoder_pins(dev, i);
+        uint8_t initial_state = read_encoder_pins(dev, i);
+        data->encoders[i].last_state = initial_state;
         data->encoders[i].position = 0;
         data->debounce_counters[i] = 0;
+        LOG_INF("Encoder %d initial state: 0x%02x", i, initial_state);
     }
 
     // Start polling
     k_work_schedule(&data->work, K_MSEC(config->poll_period_ms));
 
-    LOG_DBG("Encoder kscan enabled with %d encoders", config->num_encoders);
+    LOG_INF("Encoder kscan ENABLED with %d encoders, poll period: %dms",
+            config->num_encoders, config->poll_period_ms);
     return 0;
 }
 
