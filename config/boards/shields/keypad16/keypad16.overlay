@@ -6,26 +6,15 @@
         zmk,physical-layout = &default_layout;
     };
 
-    left_encoder: left_encoder {
-        compatible = "alps,ec11";
-        a-gpios = <&gpio0 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        b-gpios = <&gpio0 4 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        steps = <80>;
-        status = "okay";
-    };
-
-    right_encoder: right_encoder {
-        compatible = "alps,ec11";
-        a-gpios = <&gpio0 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        b-gpios = <&gpio0 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        steps = <80>;
-        status = "okay";
-    };
-
-    sensors: sensors {
-        compatible = "zmk,keymap-sensors";
-        sensors = <&left_encoder &right_encoder>;
-        triggers-per-rotation = <20>;
+    // Encoder rotation kscan - emulates encoders as key matrix
+    encoder_rotation_kscan: encoder_rotation_kscan {
+        compatible = "zmk,kscan-gpio-encoder";
+        a-gpios = <&gpio0 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>,
+                  <&gpio0 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        b-gpios = <&gpio0 4 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>,
+                  <&gpio0 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        debounce-period-ms = <2>;
+        poll-period-ms = <5>;
     };
     
     encoder_kscan: encoder_kscan {
@@ -35,7 +24,7 @@
     };
     composite_kscan: composite_kscan {
         compatible = "zmk,kscan-composite";
-        rows = <5>;
+        rows = <7>;
         columns = <4>;
 
         matrix {
@@ -45,6 +34,12 @@
         encoder_switches {
             kscan = <&encoder_kscan>;
             row-offset = <4>;
+        };
+
+        encoder_rotations {
+            kscan = <&encoder_rotation_kscan>;
+            row-offset = <5>;
+            column-offset = <0>;
         };
     };
 
@@ -66,13 +61,14 @@
 	default_transform: keymap_transform_0 {
 		compatible = "zmk,matrix-transform";
 		columns = <4>;
-		rows = <5>;
+		rows = <7>;
         map = <
             0  4  8 12
             1  5  9 13
             2  6 10 14
             3  7 11 15
             16 17 18 19
+            20 21 24 25
         >;
 	};
     default_layout: default_layout {

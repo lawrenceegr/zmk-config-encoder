@@ -13,8 +13,8 @@
                 &kp N8    &kp N9    &kp N0    &studio_unlock
                 &kp ASTRK &kp BSPC  &kp POUND   &kp ENTER
                 &kp C_MUTE &none    &none      &none
+                &kp C_VOL_DN &kp C_VOL_UP &kp PG_DN &kp PG_UP
             >;
-            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
         };
         
         function_layer {
@@ -24,8 +24,8 @@
                 &trans    &trans    &trans    &trans
                 &kp EQUAL &trans    &trans    &studio_unlock
                 &trans    &trans    &trans    &trans
+                &trans    &trans    &trans    &trans
             >;
-            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
         };
     };
 };
