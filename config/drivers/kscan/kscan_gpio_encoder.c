@@ -15,6 +15,7 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #define ENCODER_STATE_MASK 0x03
+#define MAX_ENCODERS 4
 
 struct encoder_state {
     uint8_t last_state;
@@ -33,8 +34,8 @@ struct kscan_gpio_encoder_data {
     kscan_callback_t callback;
     struct k_work_delayable work;
     const struct device *dev;
-    struct encoder_state *encoders;
-    uint32_t *debounce_counters;
+    struct encoder_state encoders[MAX_ENCODERS];
+    uint32_t debounce_counters[MAX_ENCODERS];
     bool enabled;
 };
 
@@ -175,18 +176,9 @@ static int kscan_gpio_encoder_init(const struct device *dev) {
 
     data->dev = dev;
 
-    // Allocate encoder state tracking
-    data->encoders = k_malloc(sizeof(struct encoder_state) * config->num_encoders);
-    if (!data->encoders) {
-        LOG_ERR("Failed to allocate encoder state memory");
-        return -ENOMEM;
-    }
-
-    data->debounce_counters = k_malloc(sizeof(uint32_t) * config->num_encoders);
-    if (!data->debounce_counters) {
-        LOG_ERR("Failed to allocate debounce counter memory");
-        k_free(data->encoders);
-        return -ENOMEM;
+    if (config->num_encoders > MAX_ENCODERS) {
+        LOG_ERR("Too many encoders: %d (max %d)", config->num_encoders, MAX_ENCODERS);
+        return -EINVAL;
     }
 
     // Configure GPIO pins
@@ -261,6 +253,6 @@ static const struct kscan_driver_api kscan_gpio_encoder_api = {
                                                                                          \
     DEVICE_DT_INST_DEFINE(inst, kscan_gpio_encoder_init, NULL, &data_##inst,           \
                           &config_##inst, POST_KERNEL,                                   \
-                          CONFIG_ZMK_KSCAN_INIT_PRIORITY, &kscan_gpio_encoder_api);
+                          CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &kscan_gpio_encoder_api);
 
 DT_INST_FOREACH_STATUS_OKAY(KSCAN_GPIO_ENCODER_INIT)
