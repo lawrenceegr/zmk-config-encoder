@@ -24,12 +24,13 @@ properties:
 
   debounce-period-ms:
     type: int
-    default: 2
+    default: 1
     description: |
-      Debounce period in milliseconds to filter encoder noise.
+      Debounce period in milliseconds to filter encoder noise (currently unused).
 
   poll-period-ms:
     type: int
-    default: 5
+    default: 1
     description: |
       Polling interval in milliseconds for reading encoder state.
+      Lower values = more responsive but higher CPU usage. Recommended: 1-5ms.

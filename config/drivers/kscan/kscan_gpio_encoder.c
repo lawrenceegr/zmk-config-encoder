@@ -39,36 +39,40 @@ struct kscan_gpio_encoder_data {
     bool enabled;
 };
 
-static const int8_t encoder_state_table[16] = {
-    0,  // 0000: No change
-    -1, // 0001: CCW
-    1,  // 0010: CW
-    0,  // 0011: Invalid
-    1,  // 0100: CW
-    0,  // 0101: No change
-    0,  // 0110: Invalid
-    -1, // 0111: CCW
-    -1, // 1000: CCW
-    0,  // 1001: Invalid
-    0,  // 1010: No change
-    1,  // 1011: CW
-    0,  // 1100: Invalid
-    1,  // 1101: CW
-    -1, // 1110: CCW
-    0   // 1111: No change
-};
-
+// Read AB state - matches ZMK EC11 driver format
 static uint8_t read_encoder_pins(const struct device *dev, uint32_t encoder_idx) {
     const struct kscan_gpio_encoder_config *config = dev->config;
-    uint8_t state = 0;
 
-    int a_val = gpio_pin_get_dt(&config->a_gpios[encoder_idx]);
-    int b_val = gpio_pin_get_dt(&config->b_gpios[encoder_idx]);
+    // Read pins: A in bit 1, B in bit 0 (same as official EC11 driver)
+    return (gpio_pin_get_dt(&config->a_gpios[encoder_idx]) << 1) |
+           gpio_pin_get_dt(&config->b_gpios[encoder_idx]);
+}
 
-    if (a_val > 0) state |= 0x01;
-    if (b_val > 0) state |= 0x02;
+// Decode quadrature state - returns -1 (CW), 0 (no change), or 1 (CCW)
+static int8_t decode_quadrature(uint8_t current_state, uint8_t prev_state) {
+    // Combine current and previous state (4-bit pattern)
+    // This matches the official ZMK EC11 driver logic
+    uint8_t combined = current_state | (prev_state << 2);
 
-    return state;
+    switch (combined) {
+        // Clockwise rotation
+        case 0b0010:
+        case 0b0100:
+        case 0b1101:
+        case 0b1011:
+            return -1;
+
+        // Counter-clockwise rotation
+        case 0b0001:
+        case 0b0111:
+        case 0b1110:
+        case 0b1000:
+            return 1;
+
+        // No change or invalid transition
+        default:
+            return 0;
+    }
 }
 
 static void kscan_gpio_encoder_poll(struct k_work *work) {
@@ -86,42 +90,31 @@ static void kscan_gpio_encoder_poll(struct k_work *work) {
         uint8_t current_state = read_encoder_pins(dev, i);
         uint8_t last_state = data->encoders[i].last_state;
 
-        // Combine last and current state for lookup
-        uint8_t combined = ((last_state & ENCODER_STATE_MASK) << 2) |
-                          (current_state & ENCODER_STATE_MASK);
+        // Decode quadrature signal using official EC11 algorithm
+        int8_t delta = decode_quadrature(current_state, last_state);
 
-        int8_t direction = encoder_state_table[combined];
+        if (delta != 0) {
+            // Accumulate rotation
+            data->encoders[i].position += delta;
 
-        if (direction != 0) {
-            // Debouncing: require consistent reading
-            if (data->debounce_counters[i] < config->debounce_period_ms) {
-                data->debounce_counters[i]++;
-            } else {
-                // Emit key event
-                // Row = encoder index
-                // Col = 0 for CCW, 1 for CW
-                uint32_t row = i;
-                uint32_t col = (direction > 0) ? 1 : 0;
+            // Emit key event on each detent
+            // Row = encoder index
+            // Col = 0 for CW (delta < 0), 1 for CCW (delta > 0)
+            uint32_t row = i;
+            uint32_t col = (delta > 0) ? 1 : 0;
 
-                LOG_DBG("Encoder %d rotated %s (row=%d, col=%d)",
-                        i, direction > 0 ? "CW" : "CCW", row, col);
+            LOG_DBG("Encoder %d: delta=%d, pos=%d (row=%d, col=%d)",
+                    i, delta, data->encoders[i].position, row, col);
 
-                // Press
-                if (data->callback != NULL) {
-                    data->callback(dev, row, col, true);
-
-                    // Immediate release
-                    k_msleep(10);
-                    data->callback(dev, row, col, false);
-                }
-
-                data->debounce_counters[i] = 0;
+            // Emit key press/release
+            if (data->callback != NULL) {
+                data->callback(dev, row, col, true);
+                k_msleep(10);
+                data->callback(dev, row, col, false);
             }
-        } else {
-            // Reset debounce if no movement
-            data->debounce_counters[i] = 0;
         }
 
+        // Always update state
         data->encoders[i].last_state = current_state;
     }
 
