@@ -81,14 +81,28 @@ static void kscan_gpio_encoder_poll(struct k_work *work) {
         CONTAINER_OF(dwork, struct kscan_gpio_encoder_data, work);
     const struct device *dev = data->dev;
     const struct kscan_gpio_encoder_config *config = dev->config;
+    static uint32_t poll_count = 0;
 
     if (!data->enabled) {
         return;
     }
 
+    poll_count++;
+
+    // Debug: Log polling activity every 1000 polls
+    if (poll_count % 1000 == 0) {
+        LOG_INF("Encoder poll running (count: %d)", poll_count);
+    }
+
     for (uint32_t i = 0; i < config->num_encoders; i++) {
         uint8_t current_state = read_encoder_pins(dev, i);
         uint8_t last_state = data->encoders[i].last_state;
+
+        // Debug: Log state changes (even if no rotation detected)
+        if (current_state != last_state) {
+            LOG_INF("Encoder %d state change: 0x%02x -> 0x%02x",
+                    i, last_state, current_state);
+        }
 
         // Decode quadrature signal using official EC11 algorithm
         int8_t delta = decode_quadrature(current_state, last_state);

@@ -71,7 +71,7 @@
 	};
     default_layout: default_layout {
 		compatible = "zmk,physical-layout";
-		display-name = "Randy Keyboard";
+		display-name = "Macropad";
 		transform = <&default_transform>;
 		kscan = <&kscan0>;
 		
