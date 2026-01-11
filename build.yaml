@@ -10,7 +10,7 @@
 include:
   - board: rpi_pico
     shield: keypad16
-    snippet: studio-rpc-usb-uart
+    snippet: studio-rpc-usb-uart zmk-usb-logging
     cmake-args: -DCONFIG_ZMK_STUDIO=y
     artifact-name: with_studio_keypad16
 
