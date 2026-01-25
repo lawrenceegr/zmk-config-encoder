@@ -41,7 +41,10 @@ struct kscan_gpio_qdec_data {
 };
 
 /* Forward declaration for input callback */
-static void kscan_gpio_qdec_input_cb(struct input_event *evt, void *user_data);
+static void kscan_gpio_qdec_input_cb(struct input_event *evt);
+
+/* Static reference to the kscan device instance (supports single instance) */
+static const struct device *kscan_qdec_dev;
 
 /*
  * Find encoder index by matching the source device.
@@ -82,9 +85,12 @@ static int find_encoder_by_axis(const struct kscan_gpio_qdec_config *config,
  *   Col 0 = CW rotation (positive value)
  *   Col 1 = CCW rotation (negative value)
  */
-static void kscan_gpio_qdec_input_cb(struct input_event *evt, void *user_data)
+static void kscan_gpio_qdec_input_cb(struct input_event *evt)
 {
-    const struct device *dev = (const struct device *)user_data;
+    const struct device *dev = kscan_qdec_dev;
+    if (dev == NULL) {
+        return;
+    }
     struct kscan_gpio_qdec_data *data = dev->data;
     const struct kscan_gpio_qdec_config *config = dev->config;
 
@@ -123,7 +129,7 @@ static void kscan_gpio_qdec_input_cb(struct input_event *evt, void *user_data)
 }
 
 /* Register global input callback - will filter events in the callback */
-INPUT_CALLBACK_DEFINE(NULL, kscan_gpio_qdec_input_cb, NULL);
+INPUT_CALLBACK_DEFINE(NULL, kscan_gpio_qdec_input_cb);
 
 static int kscan_gpio_qdec_configure(const struct device *dev,
                                       kscan_callback_t callback)
@@ -173,6 +179,7 @@ static int kscan_gpio_qdec_init(const struct device *dev)
     const struct kscan_gpio_qdec_config *config = dev->config;
 
     data->dev = dev;
+    kscan_qdec_dev = dev;
 
     if (config->num_encoders > MAX_ENCODERS) {
         LOG_ERR("Too many encoders: %d (max %d)", config->num_encoders, MAX_ENCODERS);
