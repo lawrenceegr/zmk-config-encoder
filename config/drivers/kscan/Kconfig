@@ -1,11 +1,11 @@
 # Copyright (c) 2024 The ZMK Contributors
 # SPDX-License-Identifier: MIT
 
-config ZMK_KSCAN_GPIO_QDEC
-	bool "GPIO QDEC KScan Driver"
+config ZMK_KSCAN_VIRTUAL
+	bool "Virtual KScan Driver"
 	default n
 	select INPUT
 	help
-	  Enable kscan driver that consumes Zephyr's gpio-qdec input events
-	  and converts encoder rotations to key matrix events.
-	  This driver leverages Zephyr's built-in quadrature decoder.
+	  Enable virtual kscan driver that provides software-defined key
+	  positions triggered by input events (e.g., from gpio-qdec encoders).
+	  Virtual keys appear in ZMK Studio as editable positions.

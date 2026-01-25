@@ -1,0 +1,69 @@
+# Copyright (c) 2024 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+description: |
+  Virtual KScan driver - software-defined key positions with no GPIO backing.
+
+  This driver creates virtual switches that can be triggered by input events
+  (such as from gpio-qdec encoders). The virtual keys appear in ZMK Studio
+  as editable key positions.
+
+  Each virtual key is defined by:
+    - An input axis code (INPUT_REL_X, INPUT_REL_Y, etc.)
+    - A direction (1 for positive/CW, -1 for negative/CCW)
+
+  The keys are laid out as a single row: row=0, col=key_index
+
+  Example usage:
+
+    #include <zephyr/dt-bindings/input/input-event-codes.h>
+
+    /* Define gpio-qdec encoders separately */
+    encoder_left: encoder_left {
+        compatible = "gpio-qdec";
+        gpios = <&gpio0 3 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>,
+                <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+        steps-per-period = <4>;
+        zephyr,axis = <INPUT_REL_X>;
+        sample-time-us = <2000>;
+        idle-timeout-ms = <200>;
+    };
+
+    encoder_right: encoder_right {
+        compatible = "gpio-qdec";
+        gpios = <&gpio0 6 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>,
+                <&gpio0 7 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+        steps-per-period = <4>;
+        zephyr,axis = <INPUT_REL_Y>;
+        sample-time-us = <2000>;
+        idle-timeout-ms = <200>;
+    };
+
+    /* Virtual kscan triggered by encoder input events */
+    virtual_kscan: virtual_kscan {
+        compatible = "zmk,kscan-virtual";
+        /* 4 virtual keys: Left CW, Left CCW, Right CW, Right CCW */
+        input-codes    = <INPUT_REL_X INPUT_REL_X INPUT_REL_Y INPUT_REL_Y>;
+        input-directions = <1 (-1) 1 (-1)>;
+    };
+
+compatible: "zmk,kscan-virtual"
+
+include: kscan.yaml
+
+properties:
+  input-codes:
+    type: array
+    required: true
+    description: |
+      Array of INPUT_REL_* axis codes for each virtual key.
+      Common values: INPUT_REL_X (0x00), INPUT_REL_Y (0x01), INPUT_REL_WHEEL (0x08)
+
+  input-directions:
+    type: array
+    required: true
+    description: |
+      Array of directions for each virtual key.
+      Use 1 for positive direction (CW rotation).
+      Use -1 for negative direction (CCW rotation).
+      Must have the same length as 'input-codes'.

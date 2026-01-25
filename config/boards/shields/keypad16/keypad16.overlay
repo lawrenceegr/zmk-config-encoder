@@ -28,15 +28,18 @@
         idle-timeout-ms = <200>;
     };
 
-    /* QDEC kscan driver - consumes gpio-qdec input events
-     * Outputs: row = encoder index, col 0 = CW, col 1 = CCW
-     *   Row 0: Left encoder  - col 0 = CW, col 1 = CCW
-     *   Row 1: Right encoder - col 0 = CW, col 1 = CCW
+    /* Virtual kscan - triggered by gpio-qdec input events
+     * No GPIO scanning - purely software-defined key positions
+     * Layout: row 0, cols 0-3 for the 4 encoder directions
+     *   Col 0: Left CW   (INPUT_REL_X, positive)
+     *   Col 1: Left CCW  (INPUT_REL_X, negative)
+     *   Col 2: Right CW  (INPUT_REL_Y, positive)
+     *   Col 3: Right CCW (INPUT_REL_Y, negative)
      */
-    encoder_rotation_kscan: encoder_rotation_kscan {
-        compatible = "zmk,kscan-gpio-qdec";
-        devices = <&encoder_left &encoder_right>;
-        axes = <INPUT_REL_X INPUT_REL_Y>;
+    virtual_kscan: virtual_kscan {
+        compatible = "zmk,kscan-virtual";
+        input-codes = <INPUT_REL_X INPUT_REL_X INPUT_REL_Y INPUT_REL_Y>;
+        input-directions = <1 (-1) 1 (-1)>;
     };
 
     /* Encoder button switches
@@ -50,45 +53,43 @@
                       <&gpio0 8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
     };
 
-    /* Composite kscan combining encoder buttons and rotations
+    /* Composite kscan combining encoder buttons and virtual rotation keys
      *
-     * Final matrix layout (3 rows × 2 columns):
+     * Final matrix layout (2 rows × 4 columns):
      *   Row 0: Left button (col 0), Right button (col 1)  <- from encoder_kscan
-     *   Row 1: Left CW (col 0), Left CCW (col 1)          <- from rotation row 0
-     *   Row 2: Right CW (col 0), Right CCW (col 1)        <- from rotation row 1
+     *   Row 1: Left CW (col 0), Left CCW (col 1), Right CW (col 2), Right CCW (col 3) <- virtual
      */
     composite_kscan: composite_kscan {
         compatible = "zmk,kscan-composite";
-        rows = <3>;
-        columns = <2>;
+        rows = <2>;
+        columns = <4>;
 
         encoder_switches {
             kscan = <&encoder_kscan>;
             row-offset = <0>;
         };
 
-        encoder_rotations {
-            kscan = <&encoder_rotation_kscan>;
+        virtual_keys {
+            kscan = <&virtual_kscan>;
             row-offset = <1>;
         };
     };
 
     default_transform: keymap_transform_0 {
         compatible = "zmk,matrix-transform";
-        columns = <2>;
-        rows = <3>;
+        columns = <4>;
+        rows = <2>;
         /* Map: RC(row, col) -> keymap position
          *   Position 0 = RC(0,0) = Left button
          *   Position 1 = RC(0,1) = Right button
-         *   Position 2 = RC(1,0) = Left CW
-         *   Position 3 = RC(1,1) = Left CCW
-         *   Position 4 = RC(2,0) = Right CW
-         *   Position 5 = RC(2,1) = Right CCW
+         *   Position 2 = RC(1,0) = Left CW   (virtual)
+         *   Position 3 = RC(1,1) = Left CCW  (virtual)
+         *   Position 4 = RC(1,2) = Right CW  (virtual)
+         *   Position 5 = RC(1,3) = Right CCW (virtual)
          */
         map = <
-            0 1
-            2 3
-            4 5
+            RC(0,0) RC(0,1)
+            RC(1,0) RC(1,1) RC(1,2) RC(1,3)
         >;
     };
 
@@ -99,15 +100,14 @@
         kscan = <&composite_kscan>;
 
         keys  //                    w   h   x    y    rot  rx   ry
-            // Encoder buttons (row 0)
+            // Encoder buttons (row 0 - physical GPIO)
             = <&key_physical_attrs 100 100   0    0    0    0    0>  // 0: Left encoder button
             , <&key_physical_attrs 100 100 150    0    0    0    0>  // 1: Right encoder button
-            // Left encoder rotations (row 1)
-            , <&key_physical_attrs  80  50   0  120    0    0    0>  // 2: Left CW
-            , <&key_physical_attrs  80  50   0  180    0    0    0>  // 3: Left CCW
-            // Right encoder rotations (row 2)
-            , <&key_physical_attrs  80  50 150  120    0    0    0>  // 4: Right CW
-            , <&key_physical_attrs  80  50 150  180    0    0    0>  // 5: Right CCW
+            // Encoder rotations (row 1 - virtual keys, no GPIO)
+            , <&key_physical_attrs  80  50   0  120    0    0    0>  // 2: Left CW (virtual)
+            , <&key_physical_attrs  80  50   0  180    0    0    0>  // 3: Left CCW (virtual)
+            , <&key_physical_attrs  80  50 150  120    0    0    0>  // 4: Right CW (virtual)
+            , <&key_physical_attrs  80  50 150  180    0    0    0>  // 5: Right CCW (virtual)
             ;
     };
 };
