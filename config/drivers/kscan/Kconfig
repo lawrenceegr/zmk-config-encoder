@@ -1,14 +1,6 @@
 # Copyright (c) 2024 The ZMK Contributors
 # SPDX-License-Identifier: MIT
 
-config ZMK_KSCAN_GPIO_ENCODER
-	bool "GPIO Encoder KScan Driver"
-	default n
-	help
-	  Enable GPIO-based rotary encoder kscan driver that emits
-	  encoder rotations as key matrix events for ZMK Studio compatibility.
-	  This driver performs quadrature decoding directly.
-
 config ZMK_KSCAN_GPIO_QDEC
 	bool "GPIO QDEC KScan Driver"
 	default n
