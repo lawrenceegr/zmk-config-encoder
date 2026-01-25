@@ -7,3 +7,13 @@ config ZMK_KSCAN_GPIO_ENCODER
 	help
 	  Enable GPIO-based rotary encoder kscan driver that emits
 	  encoder rotations as key matrix events for ZMK Studio compatibility.
+	  This driver performs quadrature decoding directly.
+
+config ZMK_KSCAN_GPIO_QDEC
+	bool "GPIO QDEC KScan Driver"
+	default n
+	select INPUT
+	help
+	  Enable kscan driver that consumes Zephyr's gpio-qdec input events
+	  and converts encoder rotations to key matrix events.
+	  This driver leverages Zephyr's built-in quadrature decoder.

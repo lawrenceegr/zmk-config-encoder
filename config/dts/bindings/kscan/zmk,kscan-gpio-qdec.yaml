@@ -1,0 +1,62 @@
+# Copyright (c) 2024 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+description: |
+  ZMK KScan driver that consumes Zephyr's gpio-qdec input events
+  and converts encoder rotations to key matrix events.
+
+  This driver listens to INPUT_REL_* events from gpio-qdec devices
+  and emits kscan callbacks, mapping:
+    - Row = encoder index (0, 1, 2, ...)
+    - Col 0 = CW rotation (positive input value)
+    - Col 1 = CCW rotation (negative input value)
+
+  Example usage:
+
+    #include <zephyr/dt-bindings/input/input-event-codes.h>
+
+    encoder_left: encoder_left {
+        compatible = "gpio-qdec";
+        gpios = <&gpio0 3 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>,
+                <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+        steps-per-period = <4>;
+        zephyr,axis = <INPUT_REL_X>;
+        sample-time-us = <2000>;
+        idle-timeout-ms = <200>;
+    };
+
+    encoder_right: encoder_right {
+        compatible = "gpio-qdec";
+        gpios = <&gpio0 6 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>,
+                <&gpio0 7 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+        steps-per-period = <4>;
+        zephyr,axis = <INPUT_REL_Y>;
+        sample-time-us = <2000>;
+        idle-timeout-ms = <200>;
+    };
+
+    encoder_kscan: encoder_kscan {
+        compatible = "zmk,kscan-gpio-qdec";
+        devices = <&encoder_left &encoder_right>;
+        axes = <INPUT_REL_X INPUT_REL_Y>;
+    };
+
+compatible: "zmk,kscan-gpio-qdec"
+
+include: kscan.yaml
+
+properties:
+  devices:
+    type: phandles
+    required: true
+    description: |
+      Array of phandles to gpio-qdec encoder devices.
+      The order determines the row index in the key matrix.
+
+  axes:
+    type: array
+    required: true
+    description: |
+      Array of INPUT_REL_* axis codes corresponding to each encoder.
+      Must have the same length as 'devices'.
+      Common values: INPUT_REL_X (0x00), INPUT_REL_Y (0x01), INPUT_REL_WHEEL (0x08)

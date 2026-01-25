@@ -1,4 +1,5 @@
 #include <physical_layouts.dtsi>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
     chosen {
@@ -6,108 +7,111 @@
         zmk,physical-layout = &default_layout;
     };
 
-    // Encoder rotation kscan - emulates encoders as key matrix
-    encoder_rotation_kscan: encoder_rotation_kscan {
-        compatible = "zmk,kscan-gpio-encoder";
-        a-gpios = <&gpio0 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>,
-                  <&gpio0 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        b-gpios = <&gpio0 4 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>,
-                  <&gpio0 7 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
-        poll-period-ms = <1>;
+    /* Zephyr gpio-qdec encoder devices - handles quadrature decoding */
+    encoder_left: encoder_left {
+        compatible = "gpio-qdec";
+        gpios = <&gpio0 3 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>,
+                <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+        steps-per-period = <4>;
+        zephyr,axis = <INPUT_REL_X>;
+        sample-time-us = <2000>;
+        idle-timeout-ms = <200>;
     };
-    
+
+    encoder_right: encoder_right {
+        compatible = "gpio-qdec";
+        gpios = <&gpio0 6 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>,
+                <&gpio0 7 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+        steps-per-period = <4>;
+        zephyr,axis = <INPUT_REL_Y>;
+        sample-time-us = <2000>;
+        idle-timeout-ms = <200>;
+    };
+
+    /* QDEC kscan driver - consumes gpio-qdec input events
+     * Outputs: row = encoder index, col 0 = CW, col 1 = CCW
+     *   Row 0: Left encoder  - col 0 = CW, col 1 = CCW
+     *   Row 1: Right encoder - col 0 = CW, col 1 = CCW
+     */
+    encoder_rotation_kscan: encoder_rotation_kscan {
+        compatible = "zmk,kscan-gpio-qdec";
+        devices = <&encoder_left &encoder_right>;
+        axes = <INPUT_REL_X INPUT_REL_Y>;
+    };
+
+    /* Encoder button switches
+     * Outputs: row 0, col = button index
+     *   Row 0, Col 0 = Left button
+     *   Row 0, Col 1 = Right button
+     */
     encoder_kscan: encoder_kscan {
         compatible = "zmk,kscan-gpio-direct";
         input-gpios = <&gpio0 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>,
                       <&gpio0 8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
     };
+
+    /* Composite kscan combining encoder buttons and rotations
+     *
+     * Final matrix layout (3 rows × 2 columns):
+     *   Row 0: Left button (col 0), Right button (col 1)  <- from encoder_kscan
+     *   Row 1: Left CW (col 0), Left CCW (col 1)          <- from rotation row 0
+     *   Row 2: Right CW (col 0), Right CCW (col 1)        <- from rotation row 1
+     */
     composite_kscan: composite_kscan {
         compatible = "zmk,kscan-composite";
-        rows = <7>;
-        columns = <4>;
-
-        matrix {
-            kscan = <&kscan0>;
-        };
+        rows = <3>;
+        columns = <2>;
 
         encoder_switches {
             kscan = <&encoder_kscan>;
-            row-offset = <4>;
+            row-offset = <0>;
         };
 
         encoder_rotations {
             kscan = <&encoder_rotation_kscan>;
-            row-offset = <5>;
+            row-offset = <1>;
         };
     };
 
-    kscan0: kscan {
-        compatible = "zmk,kscan-gpio-matrix";
-        diode-direction = "col2row";
-
-        row-gpios = <&gpio0 14 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,
-                    <&gpio0 15 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,
-                    <&gpio0 26 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,
-                    <&gpio0 27 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
-
-        col-gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>,
-                    <&gpio0 29 GPIO_ACTIVE_HIGH>,
-                    <&gpio0 1 GPIO_ACTIVE_HIGH>,
-                    <&gpio0 0 GPIO_ACTIVE_HIGH>;
+    default_transform: keymap_transform_0 {
+        compatible = "zmk,matrix-transform";
+        columns = <2>;
+        rows = <3>;
+        /* Map: RC(row, col) -> keymap position
+         *   Position 0 = RC(0,0) = Left button
+         *   Position 1 = RC(0,1) = Right button
+         *   Position 2 = RC(1,0) = Left CW
+         *   Position 3 = RC(1,1) = Left CCW
+         *   Position 4 = RC(2,0) = Right CW
+         *   Position 5 = RC(2,1) = Right CCW
+         */
+        map = <
+            0 1
+            2 3
+            4 5
+        >;
     };
 
-	default_transform: keymap_transform_0 {
-		compatible = "zmk,matrix-transform";
-		columns = <4>;
-		rows = <7>;
-        map = <
-            0  4  8 12
-            1  5  9 13
-            2  6 10 14
-            3  7 11 15
-            16 17 20 21
-            24 25
-        >;
-	};
     default_layout: default_layout {
-		compatible = "zmk,physical-layout";
-		display-name = "Macropad";
-		transform = <&default_transform>;
-		kscan = <&kscan0>;
-		
-		keys  //                    w   h   x    y    rot  rx   ry
-			// Row 0 - Main 4x4 Keypad
-			= <&key_physical_attrs 100 100   0    0    0    0    0>
-			, <&key_physical_attrs 100 100 100    0    0    0    0>
-			, <&key_physical_attrs 100 100 200    0    0    0    0>
-			, <&key_physical_attrs 100 100 300    0    0    0    0>
-			// Row 1
-			, <&key_physical_attrs 100 100   0  100    0    0    0>
-			, <&key_physical_attrs 100 100 100  100    0    0    0>
-			, <&key_physical_attrs 100 100 200  100    0    0    0>
-			, <&key_physical_attrs 100 100 300  100    0    0    0>
-			// Row 2
-			, <&key_physical_attrs 100 100   0  200    0    0    0>
-			, <&key_physical_attrs 100 100 100  200    0    0    0>
-			, <&key_physical_attrs 100 100 200  200    0    0    0>
-			, <&key_physical_attrs 100 100 300  200    0    0    0>
-			// Row 3
-			, <&key_physical_attrs 100 100   0  300    0    0    0>
-			, <&key_physical_attrs 100 100 100  300    0    0    0>
-			, <&key_physical_attrs 100 100 200  300    0    0    0>
-			, <&key_physical_attrs 100 100 300  300    0    0    0>
-			// Encoder buttons - separated from keypad (x offset +450)
-			, <&key_physical_attrs 100 100 450    0    0    0    0>  // Left encoder button (16)
-			, <&key_physical_attrs 100 100 450  100    0    0    0>  // Right encoder button (17)
-			// Encoder rotations - next to encoder buttons
-			, <&key_physical_attrs  80  50 560    0    0    0    0>  // Left CCW (20)
-			, <&key_physical_attrs  80  50 560   50    0    0    0>  // Left CW (21)
-			, <&key_physical_attrs  80  50 560  100    0    0    0>  // Right CCW (24)
-			, <&key_physical_attrs  80  50 560  150    0    0    0>  // Right CW (25)
-			;
-	};
+        compatible = "zmk,physical-layout";
+        display-name = "Encoder Pad";
+        transform = <&default_transform>;
+        kscan = <&composite_kscan>;
+
+        keys  //                    w   h   x    y    rot  rx   ry
+            // Encoder buttons (row 0)
+            = <&key_physical_attrs 100 100   0    0    0    0    0>  // 0: Left encoder button
+            , <&key_physical_attrs 100 100 150    0    0    0    0>  // 1: Right encoder button
+            // Left encoder rotations (row 1)
+            , <&key_physical_attrs  80  50   0  120    0    0    0>  // 2: Left CW
+            , <&key_physical_attrs  80  50   0  180    0    0    0>  // 3: Left CCW
+            // Right encoder rotations (row 2)
+            , <&key_physical_attrs  80  50 150  120    0    0    0>  // 4: Right CW
+            , <&key_physical_attrs  80  50 150  180    0    0    0>  // 5: Right CCW
+            ;
+    };
 };
 
 &zephyr_udc0 {
-	status = "okay";
+    status = "okay";
 };

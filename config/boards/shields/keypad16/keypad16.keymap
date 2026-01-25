@@ -5,26 +5,20 @@
 / {
     keymap {
         compatible = "zmk,keymap";
-        
+
         default_layer {
+            /* Keymap positions:
+             *   0: Left encoder button
+             *   1: Right encoder button
+             *   2: Left CW
+             *   3: Left CCW
+             *   4: Right CW
+             *   5: Right CCW
+             */
             bindings = <
-                &kp N1    &kp N2    &kp N3    &kp N4
-                &kp N5    &kp N6    &kp N7    &mo 1
-                &kp N8    &kp N9    &kp N0    &studio_unlock
-                &kp ASTRK &kp BSPC  &kp POUND   &kp ENTER
-                &kp C_MUTE &none    &kp C_VOL_DN &kp C_VOL_UP
-                &kp PG_DN &kp PG_UP
-            >;
-        };
-        
-        function_layer {
-            bindings = <
-                &trans    &trans    &trans    &trans
-                &trans    &trans    &trans    &trans
-                &trans    &trans    &trans    &trans
-                &kp EQUAL &trans    &trans    &studio_unlock
-                &trans    &trans    &trans    &trans
-                &trans    &trans
+                &kp C_MUTE    &kp C_PP
+                &kp C_VOL_UP  &kp C_VOL_DN
+                &kp C_NEXT    &kp C_PREV
             >;
         };
     };
